@@ -2,28 +2,28 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: leaf1
+  name: foo
   namespace: networkpolicy-leaf1
   labels:
     app: foo
 spec:
   selector:
     matchLabels:
-      app: leaf1
+      app: foo
   replicas: 1
   template:
     metadata:
       labels:
-        app: leaf1
+        app: foo
       annotations:
     spec:
       containers:
-        - name: leaf1
-          image: docker.io/sholly/servicemesh-leaf1:netpolicy
+        - name: foo
+          image: docker.io/sholly/foo:1.0
           imagePullPolicy: Always
           volumeMounts:
           - mountPath: /deployments/config
-            name: leaf1-volume
+            name: foo-volume
           ports:
             - containerPort: 8080
               name: http
@@ -39,15 +39,15 @@ spec:
       volumes:
       - configMap:
           defaultMode: 420
-          name: leaf1
-        name: leaf1-volume
+          name: foo
+        name: foo-volume
 ---
 apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: leaf1
-  name: leaf1
+    app: foo
+  name: foo
   namespace: networkpolicy-leaf1
 spec:
   ports:
@@ -56,36 +56,34 @@ spec:
       protocol: TCP
       targetPort: 8080
   selector:
-    app: leaf1
+    app: foo
 ---
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   labels:
-    app: leaf1
-  name: leaf1
+    app: foo
+  name: foo
   namespace: networkpolicy-leaf1
 spec:
   port:
     targetPort: http
   to:
     kind: Service
-    name: leaf1
+    name: foo
     weight: 100
   wildcardPolicy: None
 ---
 apiVersion: v1
 data:
   application.properties: |-
-    spring.application.name=leaf1
+    spring.application.name=foo
     server.port=8080
     management.endpoints.web.exposure.include=*
     leaf2.hostname=leaf2.networkpolicy-leaf2.svc
     leaf2.portnum=8080
-    foo.hostname=foo.networkpolicy-leaf1.svc
-    foo.portnum=8080
     opentracing.jaeger.enabled=false
 kind: ConfigMap
 metadata:
-  name: leaf1
+  name: foo
   namespace: networkpolicy-leaf1
