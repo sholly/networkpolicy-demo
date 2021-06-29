@@ -1,0 +1,89 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: leaf2
+  namespace: networkpolicy-leaf2
+  labels:
+    app: leaf2
+spec:
+  selector:
+    matchLabels:
+      app: leaf2
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: leaf2
+      annotations:
+    spec:
+      containers:
+        - name: leaf2
+          image: docker.io/sholly/servicemesh-leaf2:1.0
+          imagePullPolicy: Always
+          volumeMounts:
+          - mountPath: /deployments/config
+            name: leaf2-volume
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 8778
+              name: jolokia
+              protocol: TCP
+            - containerPort: 9779
+              name: prometheus
+              protocol: TCP
+          # env:
+          #   - name: SPRING_PROFILES_ACTIVE
+          #     value: openshift
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: leaf2
+        name: leaf2-volume
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: leaf2
+  name: leaf2
+  namespace: networkpolicy-leaf2
+spec:
+  ports:
+    - port: 8080
+      name: http
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: leaf2
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  labels:
+    app: leaf2
+  name: leaf2
+  namespace: networkpolicy-leaf2
+spec:
+  port:
+    targetPort: http
+  to:
+    kind: Service
+    name: leaf2
+    weight: 100
+  wildcardPolicy: None
+---
+apiVersion: v1
+data:
+  application.properties: |-
+    spring.application.name=leaf2
+    server.port=8080
+    management.endpoints.web.exposure.include=*
+    leaf1.hostname=leaf1.networkpolicy-leaf1.svc
+    leaf1.portnum=8080
+    opentracing.jaeger.enabled=false
+kind: ConfigMap
+metadata:
+  name: leaf2
+  namespace: networkpolicy-leaf2
